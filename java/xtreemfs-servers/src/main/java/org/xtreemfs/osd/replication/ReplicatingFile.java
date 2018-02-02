@@ -553,9 +553,11 @@ class ReplicatingFile {
                     else
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
                             "%s:%d - fetch object from OSD %s (%s objects remain; " +
-                                    "number of objectsInProgress: %s)",
+                                    "number of objectsInProgress: %s; number of waitingObjects: %s)",
                                            fileID, next.objectNo, next.osd,
-                                           strategy.getObjectsCount(), this.getNumberOfObjectsInProgress());
+                                           strategy.getObjectsCount(),
+                                           getNumberOfObjectsInProgress(),
+                                           getNumberOfWaitingObjects());
                 
                 try {
                     sendFetchObjectRequest(next.objectNo, next.osd, next.attachObjectSet);
