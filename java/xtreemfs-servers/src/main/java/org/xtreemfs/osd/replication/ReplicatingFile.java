@@ -546,14 +546,14 @@ class ReplicatingFile {
                 if (Logging.isDebug())
                     if (next.attachObjectSet)
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                            "%s:%d - fetch object from OSD %s with object set of total size %s;" +
+                            "%s:%d - fetch object from OSD %s with object set of total size %s; " +
                                     "number of objectsInProgress: %s",
                                            fileID, next.objectNo, next.osd,
                                            strategy.getObjectsCount(), this.getNumberOfObjectsInProgress());
                     else
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
                             "%s:%d - fetch object from OSD %s (%s objects remain; " +
-                                    "number of ojbectsInProgress: %s)",
+                                    "number of objectsInProgress: %s)",
                                            fileID, next.objectNo, next.osd,
                                            strategy.getObjectsCount(), this.getNumberOfObjectsInProgress());
                 
