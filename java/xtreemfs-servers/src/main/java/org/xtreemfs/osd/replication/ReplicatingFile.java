@@ -692,6 +692,11 @@ class ReplicatingFile {
         // delete object in maps/lists
         strategy.removeObject(objectNo);
         ReplicatingObject replicatingObject = objectsInProgress.remove(objectNo);
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "file %s: object replication completed; " +
+                                   "removing object %s from objectsInProgress. " +
+                                   "New number of objectsInProgress: %s",
+                           fileID, objectNo);
         // free old data
         if (replicatingObject.hasDataFromEarlierResponses())
             BufferPool.free(replicatingObject.data.getData());
