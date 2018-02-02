@@ -545,11 +545,12 @@ class ReplicatingFile {
                 if (Logging.isDebug())
                     if (next.attachObjectSet)
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                            "%s:%d - fetch object from OSD %s with object set", fileID, next.objectNo,
-                            next.osd);
+                            "%s:%d - fetch object from OSD %s with object set of total size %s",
+                                           fileID, next.objectNo, next.osd, strategy.getObjectsCount());
                     else
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                            "%s:%d - fetch object from OSD %s", fileID, next.objectNo, next.osd);
+                            "%s:%d - fetch object from OSD %s (%s objects remain)",
+                                           fileID, next.objectNo, next.osd, strategy.getObjectsCount());
                 
                 try {
                     sendFetchObjectRequest(next.objectNo, next.osd, next.attachObjectSet);
