@@ -613,7 +613,12 @@ class ReplicatingFile {
     public void objectNotFetched(long objectNo, final ServiceUUID usedOSD, InternalObjectData data) {
         ReplicatingObject object = objectsInProgress.get(objectNo);
         assert (object != null);
-        
+
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "%s:%s - object not fetched",
+                           fileID, objectNo);
+
+
         try {
             boolean objectCompleted = object.objectNotFetched(data, usedOSD);
             if (objectCompleted) {
@@ -646,7 +651,11 @@ class ReplicatingFile {
     public void objectNotFetchedBecauseError(long objectNo, final ServiceUUID usedOSD, final ErrorResponse error) {
         ReplicatingObject object = objectsInProgress.get(objectNo);
         assert (object != null);
-        
+
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "%s:%s - object not fetched because of non-view error",
+                           fileID, objectNo);
+
         try {
             boolean objectCompleted = object.objectNotFetchedBecauseError(error, usedOSD);
             if (objectCompleted) {
@@ -671,6 +680,10 @@ class ReplicatingFile {
     public void objectNotFetchedBecauseViewError(long objectNo, final ServiceUUID usedOSD, final ErrorResponse error) {
         ReplicatingObject object = objectsInProgress.get(objectNo);
         assert (object != null);
+
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "%s:%s - object not fetched because of view error",
+                           fileID, objectNo);
 
         // Remember the view error (used to deny future requests until a new view/xlocset is provided)
         viewOutdated = true;
