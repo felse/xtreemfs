@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.xtreemfs.common.Capability;
 import org.xtreemfs.common.ServiceAvailability;
@@ -349,7 +350,7 @@ class ReplicatingFile {
     /**
      * key: objectNo
      */
-    private final HashMap<Long, ReplicatingObject> objectsInProgress;
+    private final ConcurrentHashMap<Long, ReplicatingObject> objectsInProgress;
     
     /**
      * contains all requests which are waiting for an object, where the
@@ -369,7 +370,7 @@ class ReplicatingFile {
         this.cow = cow;
         this.cancelled = false;
         this.viewOutdated = false;
-        this.objectsInProgress = new HashMap<Long, ReplicatingObject>();
+        this.objectsInProgress = new ConcurrentHashMap<Long, ReplicatingObject>();
         this.waitingRequests = new HashMap<Long, ReplicatingObject>();
         
         // IMPORTANT: stripe size must be the same in all striping policies
