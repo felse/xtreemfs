@@ -504,7 +504,7 @@ class ReplicatingFile {
      * @see java.util.HashMap#isEmpty()
      */
     public boolean isReplicating() {
-        return !objectsInProgress.isEmpty() && !strategy.isObjectListEmpty();
+        return !objectsInProgress.isEmpty();
     }
     
     public boolean isStopped() {
