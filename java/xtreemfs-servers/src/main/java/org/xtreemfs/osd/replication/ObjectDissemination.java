@@ -9,6 +9,7 @@
 package org.xtreemfs.osd.replication;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -367,21 +368,25 @@ public class ObjectDissemination {
                             RPCAuthentication.userService,
                             mrcUUID);
 
-            DIR.AddressMapping mrcAddress = addressMappingSet.getMappings(0);
+            DIR.AddressMapping mrcAddressMapping = addressMappingSet.getMappings(0);
 
             Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
                                "felix - address mapping for MRC: %s",
-                               mrcAddress);
+                               mrcAddressMapping);
+
+            InetSocketAddress mrcAddress =
+                    new InetSocketAddress(mrcAddressMapping.getAddress(),
+                                          mrcAddressMapping.getPort());
+
+//            master.getMRCClient().
+//                    xtreemfs_replica_list(null,
+//                                          RPCAuthentication.authNone,
+//                                          RPCAuthentication.userService,
+//                                          "this_file_id_does_not_exist",
+//                                          "", "");
 
             master.getMRCClient().
-                    xtreemfs_replica_list(null,
-                                          RPCAuthentication.authNone,
-                                          RPCAuthentication.userService,
-                                          "this_file_id_does_not_exist",
-                                          "", "");
-
-            master.getMRCClient().
-                xtreemfs_replica_mark_complete(null,
+                xtreemfs_replica_mark_complete(mrcAddress,
                                                RPCAuthentication.authNone,
                                                RPCAuthentication.userService,
                                                completeRequest.build());
