@@ -334,11 +334,21 @@ public class ObjectDissemination {
                 .setFileId(fileID)
                 .setOsdUuid(this.master.getConfig().getUUID().toString());
         try {
-        this.master.getMRCClient().
+
+            this.master.getMRCClient().
+                    xtreemfs_replica_list(null,
+                                          RPCAuthentication.authNone,
+                                          RPCAuthentication.userService,
+                                          "this_file_id_does_not_exist",
+                                          null, null);
+
+            this.master.getMRCClient().
                 xtreemfs_replica_mark_complete(null,
                                                RPCAuthentication.authNone,
                                                RPCAuthentication.userService,
                                                completeRequest.build());
+
+
 
         } catch (IOException e) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
