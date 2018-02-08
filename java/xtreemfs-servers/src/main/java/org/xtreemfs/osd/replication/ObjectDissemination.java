@@ -363,8 +363,13 @@ public class ObjectDissemination {
                                "%s - failed to send notification on completed replica to MRC",
                                fileID);
         } catch (NullPointerException ne) {
+            StringBuilder stackTrace = new StringBuilder();
+            for (StackTraceElement e: ne.getStackTrace()) {
+                stackTrace.append(e.toString());
+                stackTrace.append(" ");
+            }
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
-                               ne.toString());
+                               "felix - " + stackTrace.toString());
         }
     }
 
