@@ -341,25 +341,14 @@ public class ObjectDissemination {
                 .setFileId(fileID)
                 .setOsdUuid(this.master.getConfig().getUUID().toString());
 
-        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                           "felix - MRC client: %s",
-                           master.getMRCClient().toString());
         try {
-
-            // first we have to find out the MRC address, which only the DIR knows
-
-
-
-            DIR.ServiceSet mrcs = master.getDIRClient().xtreemfs_service_get_by_type(master.getConfig().getDirectoryService(),
-                                                                              RPCAuthentication.authNone,
-                                                                              RPCAuthentication.userService,
-                                                                              DIR.ServiceType.SERVICE_TYPE_MRC);
-
+            DIR.ServiceSet mrcs = master.getDIRClient()
+                    .xtreemfs_service_get_by_type(master.getConfig().getDirectoryService(),
+                                                  RPCAuthentication.authNone,
+                                                  RPCAuthentication.userService,
+                                                  DIR.ServiceType.SERVICE_TYPE_MRC);
 
             String mrcUUID = mrcs.getServices(0).getUuid();
-
-            Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                               "felix - found MRC: %s", mrcUUID);
 
             DIR.AddressMappingSet addressMappingSet =
                     master.getDIRClient().xtreemfs_address_mappings_get(
@@ -370,28 +359,15 @@ public class ObjectDissemination {
 
             DIR.AddressMapping mrcAddressMapping = addressMappingSet.getMappings(0);
 
-            Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                               "felix - address mapping for MRC: %s",
-                               mrcAddressMapping);
-
             InetSocketAddress mrcAddress =
                     new InetSocketAddress(mrcAddressMapping.getAddress(),
                                           mrcAddressMapping.getPort());
-
-//            master.getMRCClient().
-//                    xtreemfs_replica_list(null,
-//                                          RPCAuthentication.authNone,
-//                                          RPCAuthentication.userService,
-//                                          "this_file_id_does_not_exist",
-//                                          "", "");
 
             master.getMRCClient().
                 xtreemfs_replica_mark_complete(mrcAddress,
                                                RPCAuthentication.authNone,
                                                RPCAuthentication.userService,
                                                completeRequest.build());
-
-
 
         } catch (IOException e) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
@@ -400,16 +376,6 @@ public class ObjectDissemination {
         } catch (InterruptedException ie) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                "%s - failed to retrieve MRC address from DIR");
-        }
-        catch (NullPointerException ne) {
-            StringBuilder stackTrace = new StringBuilder();
-            stackTrace.append(ne.toString());
-            for (StackTraceElement e: ne.getStackTrace()) {
-                stackTrace.append("\n");
-                stackTrace.append(e.toString());
-            }
-            Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
-                               "felix - " + stackTrace.toString());
         }
     }
 
