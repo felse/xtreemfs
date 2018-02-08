@@ -327,22 +327,30 @@ public class ObjectDissemination {
      * notifies the MRC that a replica is now a full replica
      */
     private void notifyMRCAboutCompletedReplica(String fileID) {
+
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "felix - starting MRC replica complete notification for file %s on OSD %s",
+                           fileID, master.getConfig().getUUID().toString());
         MRC.xtreemfs_replica_mark_completeRequest.Builder completeRequest =
                 MRC.xtreemfs_replica_mark_completeRequest.newBuilder();
 
         completeRequest
                 .setFileId(fileID)
                 .setOsdUuid(this.master.getConfig().getUUID().toString());
+
+        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                           "felix - MRC client: %s",
+                           master.getMRCClient().toString());
         try {
 
-            this.master.getMRCClient().
+            master.getMRCClient().
                     xtreemfs_replica_list(null,
                                           RPCAuthentication.authNone,
                                           RPCAuthentication.userService,
                                           "this_file_id_does_not_exist",
                                           null, null);
 
-            this.master.getMRCClient().
+            master.getMRCClient().
                 xtreemfs_replica_mark_complete(null,
                                                RPCAuthentication.authNone,
                                                RPCAuthentication.userService,
