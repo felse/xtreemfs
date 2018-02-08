@@ -366,7 +366,7 @@ public class ObjectDissemination {
             StringBuilder stackTrace = new StringBuilder();
             for (StackTraceElement e: ne.getStackTrace()) {
                 stackTrace.append(e.toString());
-                stackTrace.append(" ");
+                stackTrace.append("\n");
             }
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                "felix - " + stackTrace.toString());
