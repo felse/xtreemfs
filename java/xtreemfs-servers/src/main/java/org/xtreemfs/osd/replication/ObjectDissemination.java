@@ -362,6 +362,9 @@ public class ObjectDissemination {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                "%s - failed to send notification on completed replica to MRC",
                                fileID);
+        } catch (NullPointerException ne) {
+            Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
+                               ne.toString());
         }
     }
 
