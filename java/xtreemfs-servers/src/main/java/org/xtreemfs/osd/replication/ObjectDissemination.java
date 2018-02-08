@@ -22,6 +22,7 @@ import org.xtreemfs.foundation.monitoring.Monitoring;
 import org.xtreemfs.foundation.monitoring.MonitoringLog;
 import org.xtreemfs.foundation.monitoring.NumberMonitoring;
 import org.xtreemfs.foundation.pbrpc.client.RPCAuthentication;
+import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC;
 import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC.ErrorType;
 import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC.POSIXErrno;
 import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC.RPCHeader.ErrorResponse;
@@ -31,6 +32,7 @@ import org.xtreemfs.osd.OSDRequestDispatcher;
 import org.xtreemfs.osd.replication.transferStrategies.TransferStrategy.TransferStrategyException;
 import org.xtreemfs.osd.stages.Stage.StageRequest;
 import org.xtreemfs.osd.storage.CowPolicy;
+import org.xtreemfs.pbrpc.generatedinterfaces.DIR;
 import org.xtreemfs.pbrpc.generatedinterfaces.MRC;
 
 /**
@@ -343,6 +345,34 @@ public class ObjectDissemination {
                            master.getMRCClient().toString());
         try {
 
+            // first we have to find out the MRC address, which only the DIR knows
+
+
+
+            DIR.ServiceSet mrcs = master.getDIRClient().xtreemfs_service_get_by_type(master.getConfig().getDirectoryService(),
+                                                                              RPCAuthentication.authNone,
+                                                                              RPCAuthentication.userService,
+                                                                              DIR.ServiceType.SERVICE_TYPE_MRC);
+
+
+            String mrcUUID = mrcs.getServices(0).getUuid();
+
+            Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                               "felix - found MRC: %s", mrcUUID);
+
+            DIR.AddressMappingSet addressMappingSet =
+                    master.getDIRClient().xtreemfs_address_mappings_get(
+                            master.getConfig().getDirectoryService(),
+                            RPCAuthentication.authNone,
+                            RPCAuthentication.userService,
+                            mrcUUID);
+
+            DIR.AddressMapping mrcAddress = addressMappingSet.getMappings(0);
+
+            Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
+                               "felix - address mapping for MRC: %s",
+                               mrcAddress);
+
             master.getMRCClient().
                     xtreemfs_replica_list(null,
                                           RPCAuthentication.authNone,
@@ -362,11 +392,16 @@ public class ObjectDissemination {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                "%s - failed to send notification on completed replica to MRC",
                                fileID);
-        } catch (NullPointerException ne) {
+        } catch (InterruptedException ie) {
+            Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
+                               "%s - failed to retrieve MRC address from DIR");
+        }
+        catch (NullPointerException ne) {
             StringBuilder stackTrace = new StringBuilder();
+            stackTrace.append(ne.toString());
             for (StackTraceElement e: ne.getStackTrace()) {
-                stackTrace.append(e.toString());
                 stackTrace.append("\n");
+                stackTrace.append(e.toString());
             }
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                "felix - " + stackTrace.toString());
