@@ -348,7 +348,7 @@ public class ObjectDissemination {
                                           RPCAuthentication.authNone,
                                           RPCAuthentication.userService,
                                           "this_file_id_does_not_exist",
-                                          null, null);
+                                          "", "");
 
             master.getMRCClient().
                 xtreemfs_replica_mark_complete(null,
