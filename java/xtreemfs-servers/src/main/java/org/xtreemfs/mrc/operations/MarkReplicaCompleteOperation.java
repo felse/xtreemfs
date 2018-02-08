@@ -24,7 +24,7 @@ public class MarkReplicaCompleteOperation extends MRCOperation {
             Logging.logMessage(Logging.LEVEL_DEBUG, this,
                                "Replica on OSD %s of file with id %s is now " +
                                        "marked as complete",
-                               rqArgs.getFileId(), rqArgs.getOsdUuid());
+                               rqArgs.getOsdUuid(), rqArgs.getFileId());
         }
 
         rq.setResponse(emptyResponse.getDefaultInstance());
