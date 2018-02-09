@@ -1,12 +1,19 @@
 package org.xtreemfs.mrc.operations;
 
+import org.xtreemfs.common.xloc.ReplicationFlags;
 import org.xtreemfs.foundation.logging.Logging;
+import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC;
 import org.xtreemfs.mrc.MRCRequest;
 import org.xtreemfs.mrc.MRCRequestDispatcher;
+import org.xtreemfs.mrc.UserException;
 import org.xtreemfs.mrc.database.AtomicDBUpdate;
 import org.xtreemfs.mrc.database.StorageManager;
 import org.xtreemfs.mrc.database.VolumeManager;
+import org.xtreemfs.mrc.metadata.FileMetadata;
+import org.xtreemfs.mrc.metadata.XLoc;
 import org.xtreemfs.mrc.metadata.XLocList;
+import org.xtreemfs.mrc.stages.XLocSetCoordinator;
+import org.xtreemfs.mrc.stages.XLocSetCoordinatorCallback;
 import org.xtreemfs.mrc.utils.MRCHelper;
 import org.xtreemfs.pbrpc.generatedinterfaces.MRC
         .xtreemfs_replica_mark_completeRequest;
@@ -22,7 +29,8 @@ import org.xtreemfs.pbrpc.generatedinterfaces.Common.emptyResponse;
  * Probably we should throw some exception if the file's replication policy is
  * not read-only.
  */
-public class MarkReplicaCompleteOperation extends MRCOperation {
+public class MarkReplicaCompleteOperation extends MRCOperation implements
+        XLocSetCoordinatorCallback {
 
 
     public MarkReplicaCompleteOperation(MRCRequestDispatcher master) {
@@ -61,36 +69,134 @@ public class MarkReplicaCompleteOperation extends MRCOperation {
             logXLocInfo(xLocList);
         }
 
-//        // assume that there is exactly one entry in the xLocList for
-//        // OSD osdWithCompleteReplica
-//        XLoc replicaToBeUpdated = null;
-//        for (int i = 0; i < xLocList.getReplicaCount(); i++) {
-//            if (osdWithCompleteReplica
-//                    .equals(xLocList.getReplica(i).getOSD(i))) {
-//                replicaToBeUpdated = xLocList.getReplica(i);
-//                break;
-//            }
-//        }
-//
-//        if (replicaToBeUpdated == null) {
-//            // TODO throw some exception?
-//            // or just ignore?
-//            return;
-//        }
+        // assume that there is exactly one entry in the xLocList for
+        // OSD osdWithCompleteReplica
+        XLoc replicaToBeUpdated = null;
+        for (int i = 0; i < xLocList.getReplicaCount(); i++) {
+            if (osdWithCompleteReplica
+                    .equals(xLocList.getReplica(i).getOSD(i))) {
+                replicaToBeUpdated = xLocList.getReplica(i);
+                break;
+            }
+        }
+        if (replicaToBeUpdated == null) {
+            // TODO throw some exception?
+            // or just ignore?
+            return;
+        }
+        int updatedReplicationFlag =
+                ReplicationFlags.setReplicaIsComplete(
+                        replicaToBeUpdated.getReplicationFlags());
 
-        // it seems that the MRCHelper contains code to mark a replica as
-        // complete in the MetaDataDataBase
+        replicaToBeUpdated.setReplicationFlags(updatedReplicationFlag);
+        XLoc updatedReplica = replicaToBeUpdated;
+
+        XLoc[] updatedXLocs = new XLoc[xLocList.getReplicaCount()];
+        for (int i = 0; i < xLocList.getReplicaCount(); i++) {
+            if (osdWithCompleteReplica
+                    .equals(xLocList.getReplica(i).getOSD(0))) {
+                // if the read-only replica has more than one OSD location,
+                // setting the complete flag will likely be erroneous
+                // (as all OSDs have to fetch all their objects of the file,
+                // in order for the replica to be complete)
+                updatedXLocs[i] = updatedReplica;
+            } else {
+                updatedXLocs[i] = xLocList.getReplica(i);
+            }
+        }
+
+        XLocList updatedXLocList =
+                storageManager.createXLocList(updatedXLocs,
+                                              xLocList.getReplUpdatePolicy(),
+                                              xLocList.getVersion() + 1);
+
+        XLocSetCoordinator xLocSetCoordinator = master.getXLocSetCoordinator();
+        XLocSetCoordinator.RequestMethod requestMethod =
+                xLocSetCoordinator.requestXLocSetChange(fileID,
+                                                        fileMetadata,
+                                                        xLocList,
+                                                        updatedXLocList,
+                                                        rq, this);
+
         AtomicDBUpdate atomicDBUpdate =
-                storageManager.createAtomicDBUpdate(master, rq);
-        MRCHelper.setSysAttrValue(master,
-                                  storageManager,
-                                  -1,
-                                  fileMetadata,
-                                  MRCHelper.SysAttrs.mark_replica_complete.toString(),
-                                  osdWithCompleteReplica,
-                                  atomicDBUpdate);
+                storageManager.createAtomicDBUpdate(xLocSetCoordinator,
+                                                    requestMethod);
+
+        xLocSetCoordinator.lockXLocSet(fileMetadata,
+                                       storageManager,
+                                       atomicDBUpdate);
+
+        atomicDBUpdate.execute();
+
+//        // it seems that the MRCHelper contains code to mark a replica as
+//        // complete in the MetaDataDataBase
+//        // but it seems that it doesn't work!
+//        AtomicDBUpdate atomicDBUpdate =
+//                storageManager.createAtomicDBUpdate(master, rq);
+//        MRCHelper.setSysAttrValue(master,
+//                                  storageManager,
+//                                  -1,
+//                                  fileMetadata,
+//                                  MRCHelper.SysAttrs.mark_replica_complete
+// .toString(),
+//                                  osdWithCompleteReplica,
+//                                  atomicDBUpdate);
 
         rq.setResponse(emptyResponse.getDefaultInstance());
+    }
+
+    @Override
+    public void installXLocSet(String fileId, XLocList newXLocList, XLocList
+            prevXLocList) throws Throwable {
+        VolumeManager volumeManager = master.getVolumeManager();
+        MRCHelper.GlobalFileIdResolver idResolver = new MRCHelper
+                .GlobalFileIdResolver(fileId);
+        StorageManager storageManager =
+                volumeManager.getStorageManager(idResolver.getVolumeId());
+
+        // Retrieve the file metadata.
+        final FileMetadata fileMetadata =
+                storageManager.getMetadata(idResolver.getLocalFileId());
+        if (fileMetadata == null) {
+            // if the file does not exist, it has probably deleted in the
+            // meantime, which should be fine
+            Logging.logMessage(Logging.LEVEL_DEBUG,
+                               Logging.Category.replication,
+                               this,
+                               "marking replica as complete failed" +
+                                       "because file %s does not exist " +
+                                       "(anymore)", fileId);
+            return;
+        }
+
+        AtomicDBUpdate update = storageManager.createAtomicDBUpdate(null,
+                                                                    null);
+
+        // Update the X-Locations list.
+        fileMetadata.setXLocList(newXLocList);
+        storageManager.setMetadata(fileMetadata, FileMetadata.RC_METADATA,
+                                   update);
+
+        master.getXLocSetCoordinator().unlockXLocSet(fileMetadata,
+                                                     storageManager,
+                                                     update);
+        update.execute();
+    }
+
+    @Override
+    public void handleInstallXLocSetError(Throwable error, String fileId,
+                                          XLocList newXLocList, XLocList
+                                                  prevXLocList) throws
+            Throwable {
+        // not really clear under which conditions this method is called
+        Logging.logMessage(Logging.LEVEL_WARN,
+                           Logging.Category.replication,
+                           this,
+                           "marking replica for file %s" +
+                                   " as complete failed" +
+                                   "because XLocSet change failed. Error: %s",
+                           fileId,
+                           error.toString());
     }
 
     private void logXLocInfo(XLocList xLocList) {
@@ -110,4 +216,5 @@ public class MarkReplicaCompleteOperation extends MRCOperation {
         Logging.logMessage(Logging.LEVEL_DEBUG, this,
                            replicaInfo.toString());
     }
+
 }
