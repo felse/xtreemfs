@@ -237,6 +237,15 @@ public class AddReplicaOperation extends MRCOperation implements XLocSetCoordina
         final GlobalFileIdResolver idRes = new GlobalFileIdResolver(fileId);
         final StorageManager sMan = vMan.getStorageManager(idRes.getVolumeId());
 
+        if (Logging.isDebug()) {
+            Logging.logMessage(Logging.LEVEL_DEBUG,
+                               Logging.Category.replication,
+                               this,
+                               "installing xlocset of file: %s" +
+                                       " handling error. New xlocset: %s",
+                               fileId, newXLocList.toString());
+        }
+
         // Retrieve the file metadata.
         final FileMetadata file = sMan.getMetadata(idRes.getLocalFileId());
         if (file == null)
