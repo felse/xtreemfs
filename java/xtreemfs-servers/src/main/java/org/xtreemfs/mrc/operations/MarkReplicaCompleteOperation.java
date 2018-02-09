@@ -74,7 +74,7 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
         XLoc replicaToBeUpdated = null;
         for (int i = 0; i < xLocList.getReplicaCount(); i++) {
             if (osdWithCompleteReplica
-                    .equals(xLocList.getReplica(i).getOSD(i))) {
+                    .equals(xLocList.getReplica(i).getOSD(0))) {
                 replicaToBeUpdated = xLocList.getReplica(i);
                 break;
             }
