@@ -169,6 +169,17 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
             return;
         }
 
+        if (Logging.isDebug()) {
+            Logging.logMessage(Logging.LEVEL_DEBUG,
+                               Logging.Category.replication,
+                               this,
+                               "writing that replica of file %s is " +
+                                       "complete to database. " +
+                                       "Number of replicas: %s",
+                               fileId, Integer.toString(newXLocList
+                                                                .getReplicaCount()));
+        }
+
         AtomicDBUpdate update = storageManager.createAtomicDBUpdate(null,
                                                                     null);
 
