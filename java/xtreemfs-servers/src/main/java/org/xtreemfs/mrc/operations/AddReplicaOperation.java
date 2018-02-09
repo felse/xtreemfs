@@ -204,7 +204,7 @@ public class AddReplicaOperation extends MRCOperation implements XLocSetCoordina
         if (Logging.isDebug()) {
             Logging.logMessage(Logging.LEVEL_DEBUG, Logging.Category.replication,
                                this,
-                               "installing xlocset for file %." +
+                               "installing xlocset for file %s." +
                                        "new xlocset: %s",
                                fileId, xLocList.toString());
         }
