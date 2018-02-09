@@ -105,6 +105,26 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
             }
         }
 
+        if (Logging.isDebug()) {
+            StringBuilder updateSB = new StringBuilder();
+            updateSB.append("updated XLocs: ");
+            for (int i = 0; i < updatedXLocs.length; i++) {
+                updateSB
+                        .append("replica: ")
+                        .append(i)
+
+                        .append(" replication flags: ")
+                        .append(updatedXLocs[i].getReplicationFlags())
+                        .append(" osdUUID: ")
+                        .append(updatedXLocs[i].getOSD(0));
+            }
+            Logging.logMessage(Logging.LEVEL_DEBUG,
+                               Logging.Category.replication,
+                               this,
+                               updateSB.toString());
+        }
+
+
         XLocList updatedXLocList =
                 storageManager.createXLocList(updatedXLocs,
                                               xLocList.getReplUpdatePolicy(),
@@ -127,20 +147,6 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
                                        atomicDBUpdate);
 
         atomicDBUpdate.execute();
-
-//        // it seems that the MRCHelper contains code to mark a replica as
-//        // complete in the MetaDataDataBase
-//        // but it seems that it doesn't work!
-//        AtomicDBUpdate atomicDBUpdate =
-//                storageManager.createAtomicDBUpdate(master, rq);
-//        MRCHelper.setSysAttrValue(master,
-//                                  storageManager,
-//                                  -1,
-//                                  fileMetadata,
-//                                  MRCHelper.SysAttrs.mark_replica_complete
-// .toString(),
-//                                  osdWithCompleteReplica,
-//                                  atomicDBUpdate);
 
         rq.setResponse(emptyResponse.getDefaultInstance());
     }
