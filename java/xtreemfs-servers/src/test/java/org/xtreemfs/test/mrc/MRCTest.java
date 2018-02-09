@@ -37,6 +37,7 @@ import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC.UserCredentials;
 import org.xtreemfs.mrc.ac.FileAccessManager;
 import org.xtreemfs.mrc.metadata.ReplicationPolicy;
 import org.xtreemfs.mrc.utils.Converter;
+import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.AccessControlPolicyType;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.FileCredentials;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.KeyValuePair;
@@ -47,6 +48,7 @@ import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.StripingPolicyType;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.VivaldiCoordinates;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.XCap;
 import org.xtreemfs.pbrpc.generatedinterfaces.GlobalTypes.XLocSet;
+import org.xtreemfs.pbrpc.generatedinterfaces.MRC;
 import org.xtreemfs.pbrpc.generatedinterfaces.MRC.ACCESS_FLAGS;
 import org.xtreemfs.pbrpc.generatedinterfaces.MRC.DirectoryEntries;
 import org.xtreemfs.pbrpc.generatedinterfaces.MRC.Setattrs;
@@ -1287,6 +1289,120 @@ public class MRCTest {
         
         assertEquals(rp.getName(), xLoc.getReplicaUpdatePolicy());
         assertEquals(rp.getFactor(), xLoc.getReplicasCount());
+    }
+
+    @Test
+    public void testMarkReplicaComplete() throws Exception {
+        final String uid = "userXY";
+        final List<String> gids = createGIDs("groupZ");
+        final String volumeName = "testVolume";
+        final UserCredentials uc = createUserCredentials(uid, gids);
+
+        final String fileName = "testFile";
+
+        final StripingPolicy sp = StripingPolicy.newBuilder().setType(
+                StripingPolicyType.STRIPING_POLICY_RAID0).setStripeSize(64).setWidth(1).build();
+
+        // create a new volume
+        invokeSync(client.xtreemfs_mkvol(mrcAddress, RPCAuthentication.authNone, uc,
+                                         AccessControlPolicyType.ACCESS_CONTROL_POLICY_NULL,
+                                         sp, "", 0, volumeName,
+                                         "", "",
+                                         getKVList(), 0));
+
+        invokeSync(client.open(mrcAddress, RPCAuthentication.authNone,
+                               uc, volumeName, fileName, FileAccessManager.O_CREAT,
+                               0775, 0, getDefaultCoordinates()));
+
+        MRC.listxattrResponse listxattrResponse =
+                invokeSync(client.listxattr(mrcAddress, RPCAuthentication.authNone,
+                                            uc, volumeName, fileName, false));
+
+        for (XAttr xAttr : listxattrResponse.getXattrsList()) {
+            if (xAttr.getName().equals("xtreemfs.locations")) {
+                System.out.println(xAttr.getValue());
+            }
+        }
+
+        xtreemfs_set_replica_update_policyRequest msg =
+                xtreemfs_set_replica_update_policyRequest.newBuilder()
+                        .setVolumeName(volumeName)
+                        .setPath(fileName)
+                        .setUpdatePolicy(ReplicaUpdatePolicies.REPL_UPDATE_PC_RONLY)
+                        .build();
+        invokeSync(client.xtreemfs_set_replica_update_policy(mrcAddress,
+                                                             RPCAuthentication.authNone,
+                                                             uc, msg));
+
+        String fileID = "";
+
+        listxattrResponse =
+                invokeSync(client.listxattr(mrcAddress, RPCAuthentication.authNone,
+                                            uc, volumeName, fileName, false));
+
+//        System.out.println(listxattrResponse.getXattrsList().toString());
+        for (XAttr xAttr: listxattrResponse.getXattrsList()) {
+            if (xAttr.getName().equals("xtreemfs.file_id")) {
+                fileID = xAttr.getValue();
+            }
+        }
+
+
+
+        System.out.println("fileID: " + fileID);
+
+        MRC.xtreemfs_get_suitable_osdsResponse suitable_osdsResponse =
+                invokeSync(client.xtreemfs_get_suitable_osds(mrcAddress,
+                                                             RPCAuthentication.authNone,
+                                                            uc,
+                                                            fileID, "", "",
+                                                             0));
+
+        String newOSD = suitable_osdsResponse.getOsdUuidsList().get(0);
+        System.out.println("newOSD: " + newOSD);
+
+        GlobalTypes.Replica replica =
+                GlobalTypes.Replica.newBuilder()
+                        .addOsdUuids(newOSD)
+                        .setReplicationFlags(ReplicationFlags.setRarestFirstStrategy(GlobalTypes.REPL_FLAG.REPL_FLAG_FULL_REPLICA.getNumber()))
+                        .setStripingPolicy(sp)
+                        .build();
+
+        System.out.println("replica: " + replica.toString());
+
+        MRC.xtreemfs_replica_addRequest xtreemfs_replica_addRequest =
+                MRC.xtreemfs_replica_addRequest.newBuilder()
+                        .setFileId(fileID)
+                        .setNewReplica(replica)
+                        .build();
+
+        System.out.println("replica add request:"
+                                   + xtreemfs_replica_addRequest.toString());
+
+        MRC.xtreemfs_replica_addResponse xtreemfs_replica_addResponse =
+                invokeSync(client.xtreemfs_replica_add(mrcAddress,
+                                                       RPCAuthentication.authNone,
+                                                       uc,
+                                                       xtreemfs_replica_addRequest));
+//        xtreemfs_replica_addResponse =
+//                invokeSync(client.xtreemfs_replica_add(mrcAddress,
+//                                                       RPCAuthentication.authNone,
+//                                                       uc,
+//                                                       xtreemfs_replica_addRequest));
+
+
+        Thread.sleep(10000);
+
+        listxattrResponse =
+                invokeSync(client.listxattr(mrcAddress, RPCAuthentication.authNone,
+                                            uc, volumeName, fileName, false));
+
+        for (XAttr xAttr : listxattrResponse.getXattrsList()) {
+            if (xAttr.getName().equals("xtreemfs.locations")) {
+                System.out.println(xAttr.getValue());
+            }
+        }
+
     }
     
     @Test
