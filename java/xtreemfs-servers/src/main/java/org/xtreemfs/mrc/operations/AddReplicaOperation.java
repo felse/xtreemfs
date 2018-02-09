@@ -201,6 +201,14 @@ public class AddReplicaOperation extends MRCOperation implements XLocSetCoordina
     @Override
     public void installXLocSet(String fileId, XLocList xLocList, XLocList oldxLocList) throws Throwable {
 
+        if (Logging.isDebug()) {
+            Logging.logMessage(Logging.LEVEL_DEBUG, Logging.Category.replication,
+                               this,
+                               "installing xlocset for file %." +
+                                       "new xlocset: %s",
+                               fileId, xLocList.toString());
+        }
+
         final VolumeManager vMan = master.getVolumeManager();
         final GlobalFileIdResolver idRes = new GlobalFileIdResolver(fileId);
         final StorageManager sMan = vMan.getStorageManager(idRes.getVolumeId());
