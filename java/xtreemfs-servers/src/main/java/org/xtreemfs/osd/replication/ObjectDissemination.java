@@ -322,61 +322,51 @@ public class ObjectDissemination {
         else
             ReplicatingFile.setMaxObjectsInProgressPerFile(MAX_OBJECTS_IN_PROGRESS_OVERALL / filesInProgress.size());
 
-        // TODO: save persistent marker that all objects of file are completely replicated, if it is a full replica
-        notifyMRCAboutCompletedReplica(fileID);
-    }
-
-    /**
-     * notifies the MRC that a replica is now a full replica
-     */
-    private void notifyMRCAboutCompletedReplica(String fileID) {
-
-        Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                           "felix - starting MRC replica complete notification for file %s on OSD %s",
-                           fileID, master.getConfig().getUUID().toString());
-        MRC.xtreemfs_replica_mark_completeRequest.Builder completeRequest =
-                MRC.xtreemfs_replica_mark_completeRequest.newBuilder();
-
-        completeRequest
-                .setFileId(fileID)
-                .setOsdUuid(this.master.getConfig().getUUID().toString());
-
+        // notifies the MRC that file replication is complete, e.g., replica
+        // on this OSD is now a complete replica. The MRC stores this
+        // information persistently in the metadata-database.
+        // (this enables save replica deletion in read-only replication mode)
         try {
-            DIR.ServiceSet mrcs = master.getDIRClient()
-                    .xtreemfs_service_get_by_type(master.getConfig().getDirectoryService(),
-                                                  RPCAuthentication.authNone,
-                                                  RPCAuthentication.userService,
-                                                  DIR.ServiceType.SERVICE_TYPE_MRC);
-
-            String mrcUUID = mrcs.getServices(0).getUuid();
-
-            DIR.AddressMappingSet addressMappingSet =
-                    master.getDIRClient().xtreemfs_address_mappings_get(
-                            master.getConfig().getDirectoryService(),
-                            RPCAuthentication.authNone,
-                            RPCAuthentication.userService,
-                            mrcUUID);
-
-            DIR.AddressMapping mrcAddressMapping = addressMappingSet.getMappings(0);
-
-            InetSocketAddress mrcAddress =
-                    new InetSocketAddress(mrcAddressMapping.getAddress(),
-                                          mrcAddressMapping.getPort());
-
             master.getMRCClient().
-                xtreemfs_replica_mark_complete(mrcAddress,
-                                               RPCAuthentication.authNone,
-                                               RPCAuthentication.userService,
-                                               completeRequest.build());
+                    xtreemfs_replica_mark_complete(getMRCAddress(),
+                                                   RPCAuthentication.authNone,
+                                                   RPCAuthentication.userService,
+                                                   fileID,
+                                                   master.getConfig().getUUID().toString());
 
         } catch (IOException e) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
-                               "%s - failed to send notification on completed replica to MRC",
+                               "%s - failed to send notification on completed" +
+                                       " replica to MRC",
                                fileID);
         } catch (InterruptedException ie) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
-                               "%s - failed to retrieve MRC address from DIR");
+                               "%s - failed to retrieve MRC address from DIR",
+                               fileID);
         }
+    }
+
+    private InetSocketAddress getMRCAddress()
+            throws IOException, InterruptedException {
+        DIR.ServiceSet mrcs = master.getDIRClient()
+                .xtreemfs_service_get_by_type(master.getConfig()
+                                                      .getDirectoryService(),
+                                              RPCAuthentication.authNone,
+                                              RPCAuthentication.userService,
+                                              DIR.ServiceType
+                                                      .SERVICE_TYPE_MRC);
+
+        String mrcUUID = mrcs.getServices(0).getUuid();
+        DIR.AddressMappingSet addressMappingSet =
+                master.getDIRClient().xtreemfs_address_mappings_get(
+                        master.getConfig().getDirectoryService(),
+                        RPCAuthentication.authNone,
+                        RPCAuthentication.userService,
+                        mrcUUID);
+        DIR.AddressMapping mrcAddressMapping = addressMappingSet
+                .getMappings(0);
+        return new InetSocketAddress(mrcAddressMapping.getAddress(),
+                                     mrcAddressMapping.getPort());
     }
 
     /**
@@ -428,7 +418,7 @@ public class ObjectDissemination {
     }
 
     /**
-     * @param fileId
+     * @param fileID
      */
     public void startNewReplication(String fileID) {
         ReplicatingFile file = filesInProgress.get(fileID);

@@ -28,10 +28,11 @@ import org.xtreemfs.pbrpc.generatedinterfaces.Common.emptyResponse;
  * This operation is only necessary for read-only replication.
  * Probably we should throw some exception if the file's replication policy is
  * not read-only.
+ *
+ * TODO support stripe width > 1 (e.g., single replica on more than one OSD).
  */
 public class MarkReplicaCompleteOperation extends MRCOperation implements
         XLocSetCoordinatorCallback {
-
 
     public MarkReplicaCompleteOperation(MRCRequestDispatcher master) {
         super(master);
@@ -44,13 +45,6 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
 
         String fileID = rqArgs.getFileId();
         String osdWithCompleteReplica = rqArgs.getOsdUuid();
-
-        if (Logging.isDebug()) {
-            Logging.logMessage(Logging.LEVEL_DEBUG, this,
-                               "Replica on OSD %s of file with id %s is now " +
-                                       "marked as complete",
-                               osdWithCompleteReplica, fileID);
-        }
 
         MRCHelper.GlobalFileIdResolver idResolver = new MRCHelper
                 .GlobalFileIdResolver(fileID);
@@ -80,14 +74,16 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
             }
         }
         if (replicaToBeUpdated == null) {
-            // TODO throw some exception?
-            // or just ignore?
+            // the file has probably been deleted in the meantime.
+            Logging.logMessage(Logging.LEVEL_WARN, Logging.Category.replication, this,
+                               "OSD %s not found in XLocs of file %s",
+                               osdWithCompleteReplica, fileID);
             return;
         }
+
         int updatedReplicationFlag =
                 ReplicationFlags.setReplicaIsComplete(
                         replicaToBeUpdated.getReplicationFlags());
-
         replicaToBeUpdated.setReplicationFlags(updatedReplicationFlag);
         XLoc updatedReplica = replicaToBeUpdated;
 
@@ -112,18 +108,17 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
                 updateSB
                         .append("replica: ")
                         .append(i)
-
                         .append(" replication flags: ")
                         .append(updatedXLocs[i].getReplicationFlags())
                         .append(" osdUUID: ")
-                        .append(updatedXLocs[i].getOSD(0));
+                        .append(updatedXLocs[i].getOSD(0))
+                        .append(" ");
             }
             Logging.logMessage(Logging.LEVEL_DEBUG,
                                Logging.Category.replication,
                                this,
                                updateSB.toString());
         }
-
 
         XLocList updatedXLocList =
                 storageManager.createXLocList(updatedXLocs,
@@ -147,6 +142,13 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
                                        atomicDBUpdate);
 
         atomicDBUpdate.execute();
+
+        if (Logging.isDebug()) {
+            Logging.logMessage(Logging.LEVEL_DEBUG, this,
+                               "Replica on OSD %s of file with id %s is now " +
+                                       "marked as complete",
+                               osdWithCompleteReplica, fileID);
+        }
 
         rq.setResponse(emptyResponse.getDefaultInstance());
     }
@@ -173,17 +175,6 @@ public class MarkReplicaCompleteOperation extends MRCOperation implements
                                        "because file %s does not exist " +
                                        "(anymore)", fileId);
             return;
-        }
-
-        if (Logging.isDebug()) {
-            Logging.logMessage(Logging.LEVEL_DEBUG,
-                               Logging.Category.replication,
-                               this,
-                               "writing that replica of file %s is " +
-                                       "complete to database. " +
-                                       "Number of replicas: %s",
-                               fileId, Integer.toString(newXLocList
-                                                                .getReplicaCount()));
         }
 
         AtomicDBUpdate update = storageManager.createAtomicDBUpdate(null,
