@@ -388,6 +388,14 @@ public class HashStorageLayout extends StorageLayout {
                     "writing object %s-%d to disk: %s", fileId, objNo, relPath);
         }
 
+        // some arbitrary waiting time to simulate concurrency induced by disk or network I/O
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
         try {
 
             final boolean isRangeWrite = (offset > 0)
