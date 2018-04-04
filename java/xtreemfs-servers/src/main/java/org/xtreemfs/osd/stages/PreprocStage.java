@@ -725,7 +725,7 @@ public class PreprocStage extends Stage {
             state = layout.getXLocSetVersionState(fileId);
         } catch (IOException e) {
             return ErrorUtils.getErrorResponse(ErrorType.ERRNO, POSIXErrno.POSIX_ERROR_EIO,
-                    "Invalid view. Local version could not be read.");
+                    fileId + " - Invalid view. Local version could not be read.");
         }
 
         XLocations locset = request.getLocationList();
@@ -750,7 +750,8 @@ public class PreprocStage extends Stage {
                 }
             } catch (IOException e) {
                 return ErrorUtils.getErrorResponse(ErrorType.ERRNO, POSIXErrno.POSIX_ERROR_EIO,
-                        "Invalid view. Local version could not be written.");
+                        fileId + " - Invalid view. Local version could not be written : "
+                + e.getMessage());
             }
 
             // The request is valid, because it is based on a newer view.
@@ -762,7 +763,7 @@ public class PreprocStage extends Stage {
                 : "The request is based on an outdated view" 
                         + "(" + locset.getVersion() + " < " + state.getVersion() + ").";
         return ErrorUtils.getErrorResponse(ErrorType.INVALID_VIEW, POSIXErrno.POSIX_ERROR_NONE, 
-                "View is not valid. " + errorMessage);
+                fileId + " - View is not valid. " + errorMessage);
     }
 
     /**
@@ -782,7 +783,7 @@ public class PreprocStage extends Stage {
             state = layout.getXLocSetVersionState(fileId);
         } catch (IOException e) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.storage, this,
-                    "VersionState could not be read for fileId: %s", fileId);
+                    "%s - VersionState could not be read", fileId);
             return;
         }
 
@@ -800,7 +801,7 @@ public class PreprocStage extends Stage {
                 master.getRWReplicationStage().setView(fileId, cellId, state);
             } catch (IOException e) {
                 Logging.logMessage(Logging.LEVEL_ERROR, Category.storage, this,
-                        "VersionState could not be written for fileId: %s", fileId);
+                        "%s - VersionState could not be written", fileId);
                 return;
             }
 
@@ -837,7 +838,8 @@ public class PreprocStage extends Stage {
             // Return an error if the local version is newer then the requested one and the replica is not already
             // invalidated.
             if (validateView && !stateBuilder.getInvalidated() && stateBuilder.getVersion() > xLoc.getVersion()) {
-                throw new InvalidXLocationsException("View is not valid. The requests is based on an outdated view.");
+                throw new InvalidXLocationsException(fileId + " - View is not valid. " +
+                                                             "The requests is based on an outdated view.");
             }
 
             // Update the local version if the request is newer.
@@ -864,7 +866,7 @@ public class PreprocStage extends Stage {
             callback.invalidateComplete(LeaseState.NONE, error);
         } catch (IOException e) {
             Logging.logMessage(Logging.LEVEL_ERROR, Category.storage, this,
-                    "VersionState could not be written for fileId: %s", fileId);
+                    "%s - VersionState could not be written", fileId);
             ErrorResponse error = ErrorUtils.getErrorResponse(ErrorType.ERRNO, POSIXErrno.POSIX_ERROR_EIO,
                     "Invalid view. Local version could not be written.");
             callback.invalidateComplete(LeaseState.NONE, error);
