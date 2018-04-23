@@ -192,10 +192,10 @@ public class ObjectDissemination {
             } catch (TransferStrategyException e) {
                 if (e.getErrorCode() == TransferStrategyException.ErrorCode.NO_OSD_FOUND)
                     file.reportError(ErrorUtils.getErrorResponse(ErrorType.ERRNO, POSIXErrno.POSIX_ERROR_EIO,
-                            "no OSD could be found for fetching an object", e));
+                            fileID + " - no OSD could be found for fetching an object", e));
                 else if (e.getErrorCode() == TransferStrategyException.ErrorCode.NO_OSD_REACHABLE)
                     file.reportError(ErrorUtils.getErrorResponse(ErrorType.ERRNO, POSIXErrno.POSIX_ERROR_EIO,
-                            "no OSD is reachable for fetching an object", e));
+                            fileID + " - no OSD is reachable for fetching an object", e));
             }
 
             if (!file.isReplicating())

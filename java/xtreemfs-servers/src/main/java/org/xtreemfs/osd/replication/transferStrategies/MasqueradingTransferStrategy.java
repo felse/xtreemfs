@@ -193,14 +193,14 @@ public abstract class MasqueradingTransferStrategy extends TransferStrategy {
 
                     if (Logging.isDebug())
                         Logging.logMessage(Logging.LEVEL_DEBUG, Category.replication, this,
-                                "OSD %s is not available", osd.toString());
+                                fileID + " - OSD %s is not available", osd.toString());
                 }
             }
         }
 
         // if no OSD could be found
         if (next.osd == null) {
-            throw new TransferStrategyException("At the moment no OSD is reachable for object " + objectNo,
+            throw new TransferStrategyException(fileID + " - At the moment no OSD is reachable for object " + objectNo,
                     TransferStrategyException.ErrorCode.NO_OSD_REACHABLE);
         }
 
