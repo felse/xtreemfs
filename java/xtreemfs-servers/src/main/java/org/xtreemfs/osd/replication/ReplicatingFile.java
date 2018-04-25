@@ -538,7 +538,33 @@ class ReplicatingFile {
      */
     public void replicate() throws TransferStrategyException {
         while (objectsInProgress.size() < maxObjectsInProgress) {
-            strategy.selectNext();
+            int maxNumTrySelectNext = 30;
+            int secondsBetweenTries = 60;
+            for (int currentTry = 0; ; currentTry++) {
+                try {
+                    strategy.selectNext();
+                    // successful selection => we are done here
+                    break;
+                } catch (TransferStrategyException e) {
+                    // not successful: wait some time and try again
+                    Logging.logMessage(Logging.LEVEL_WARN, Category.replication, this,
+                                       "%s - TransferStrategy could not find an OSD for any object; " +
+                                               "waiting %s before trying again; %s of %s tries.",
+                                       fileID, secondsBetweenTries, currentTry, maxNumTrySelectNext);
+                    if (currentTry >= maxNumTrySelectNext) {
+                        Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
+                                           "%s - TransferStrategy could repeatedly (%d) not find an OSD for any object!",
+                                           maxNumTrySelectNext);
+                        throw e;
+                    }
+                    try {
+                        Thread.sleep(secondsBetweenTries * 1000);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+
             NextRequest next = strategy.getNext();
             
             if (next != null) { // there is something to fetch
