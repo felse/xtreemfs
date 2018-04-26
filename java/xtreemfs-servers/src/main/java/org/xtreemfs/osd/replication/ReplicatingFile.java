@@ -553,8 +553,8 @@ class ReplicatingFile {
                                        fileID, secondsBetweenTries, currentTry, maxNumTrySelectNext);
                     if (currentTry >= maxNumTrySelectNext) {
                         Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
-                                           "%s - TransferStrategy could repeatedly (%d) not find an OSD for any object!",
-                                           maxNumTrySelectNext);
+                                           "%s - TransferStrategy could repeatedly (%d times) not find an OSD for any object!",
+                                           fileID, maxNumTrySelectNext);
                         throw e;
                     }
                     try {
