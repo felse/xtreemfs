@@ -547,18 +547,21 @@ class ReplicatingFile {
                     break;
                 } catch (TransferStrategyException e) {
                     // not successful: wait some time and try again
+                    int waitTimeSecs = (currentTry + 1) * secondsBetweenTries;
                     Logging.logMessage(Logging.LEVEL_WARN, Category.replication, this,
                                        "%s - TransferStrategy could not find an OSD for any object; " +
                                                "waiting %s before trying again; %s of %s tries.",
-                                       fileID, secondsBetweenTries, currentTry, maxNumTrySelectNext);
+                                       fileID, waitTimeSecs, currentTry, maxNumTrySelectNext);
                     if (currentTry >= maxNumTrySelectNext) {
                         Logging.logMessage(Logging.LEVEL_ERROR, Category.replication, this,
                                            "%s - TransferStrategy could repeatedly (%d times) not find an OSD for any object!",
                                            fileID, maxNumTrySelectNext);
+                        // TODO if replication finally fails and is no longer tried, the metadata database should be updated
+                        // (the replica that has not been created should be deleted at the MRC)
                         throw e;
                     }
                     try {
-                        Thread.sleep(secondsBetweenTries * 1000);
+                        Thread.sleep(waitTimeSecs * 1000);
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                     }
