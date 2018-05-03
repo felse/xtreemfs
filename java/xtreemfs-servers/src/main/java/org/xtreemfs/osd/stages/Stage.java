@@ -19,7 +19,6 @@ import org.xtreemfs.foundation.buffer.ReusableBuffer;
 import org.xtreemfs.foundation.logging.Logging;
 import org.xtreemfs.foundation.logging.Logging.Category;
 import org.xtreemfs.foundation.pbrpc.generatedinterfaces.RPC.RPCHeader.ErrorResponse;
-import org.xtreemfs.foundation.util.OutputUtils;
 import org.xtreemfs.osd.OSDRequest;
 
 public abstract class Stage extends LifeCycleThread {
@@ -111,8 +110,16 @@ public abstract class Stage extends LifeCycleThread {
                     assert (createdViewBuffer.getRefCount() >= 2);
                     BufferPool.free(createdViewBuffer);
                 }
-                Logging.logMessage(Logging.LEVEL_WARN, this, "stage is overloaded, request %d for %s dropped",
-                        request.getRequestId(), request.getFileId());
+                if (Logging.getLevel() >= Logging.LEVEL_WARN) {
+                    int queueHashcode = 1;
+                    for (StageRequest aQ : q) {
+                        queueHashcode *= aQ.hashCode();
+                    }
+                    Logging.logMessage(Logging.LEVEL_WARN, this, "stage is overloaded, request %d for %s dropped." +
+                                               "Queue hash: %d",
+                                       request.getRequestId(), request.getFileId(), queueHashcode);
+                }
+
                 request.sendInternalServerError(new IllegalStateException("server overloaded, request dropped"));
             }
         }
@@ -220,6 +227,10 @@ public abstract class Stage extends LifeCycleThread {
                     cause.toString());
                 Logging.logError(Logging.LEVEL_ERROR, this, cause);
             }
+        }
+
+        public int hashCode() {
+            return this.request.hashCode();
         }
     }
     

@@ -236,4 +236,8 @@ public final class OSDRequest {
     public void sendError(ErrorResponse error) {
         this.getRPCRequest().sendError(error);
     }
+
+    public int hashCode() {
+        return (int) (this.requestId % Integer.MAX_VALUE);
+    }
 }
