@@ -230,7 +230,11 @@ public abstract class Stage extends LifeCycleThread {
         }
 
         public int hashCode() {
-            return this.request.hashCode();
+            if (this.request != null) {
+                return this.request.hashCode();
+            } else {
+                return super.hashCode();
+            }
         }
     }
     
