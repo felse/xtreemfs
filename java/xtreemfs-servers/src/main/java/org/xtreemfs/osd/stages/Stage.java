@@ -8,6 +8,7 @@
 
 package org.xtreemfs.osd.stages;
 
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -195,12 +196,17 @@ public abstract class Stage extends LifeCycleThread {
         private Object[]         args;
         
         private final OSDRequest request;
+
+        private static Random hashCodeGenerator = new Random();
+
+        private final int hashCode;
         
         public StageRequest(int stageMethod, Object[] args, OSDRequest request, Object callback) {
             this.args = args;
             this.stageMethod = stageMethod;
             this.callback = callback;
             this.request = request;
+            this.hashCode = hashCodeGenerator.nextInt();
         }
         
         public int getStageMethod() {
@@ -230,11 +236,7 @@ public abstract class Stage extends LifeCycleThread {
         }
 
         public int hashCode() {
-            if (this.request != null) {
-                return this.request.hashCode();
-            } else {
-                return super.hashCode();
-            }
+            return this.hashCode;
         }
     }
     

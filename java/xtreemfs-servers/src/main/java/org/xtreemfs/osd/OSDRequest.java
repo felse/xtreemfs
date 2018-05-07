@@ -26,7 +26,7 @@ import org.xtreemfs.osd.storage.CowPolicy;
 
 /**
  * Request object.
- * 
+ *
  * @author bjko
  */
 public final class OSDRequest {
@@ -235,9 +235,5 @@ public final class OSDRequest {
 
     public void sendError(ErrorResponse error) {
         this.getRPCRequest().sendError(error);
-    }
-
-    public int hashCode() {
-        return (int) (this.requestId % Integer.MAX_VALUE);
     }
 }
