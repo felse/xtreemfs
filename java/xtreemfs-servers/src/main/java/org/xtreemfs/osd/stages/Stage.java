@@ -114,7 +114,7 @@ public abstract class Stage extends LifeCycleThread {
                 if (Logging.getLevel() >= Logging.LEVEL_WARN) {
                     int queueHashcode = 1;
                     for (StageRequest aQ : q) {
-                        queueHashcode *= aQ.hashCode();
+                        queueHashcode += aQ.hashCode();
                     }
                     Logging.logMessage(Logging.LEVEL_WARN, this, "stage is overloaded, request %d for %s dropped." +
                                                "Queue hash: %d",
